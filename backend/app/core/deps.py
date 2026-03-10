@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models import User
+from app.models.role import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -60,3 +61,31 @@ async def get_current_active_user(
 # Type aliases for cleaner dependency injection
 CurrentUser = Annotated[User, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+
+
+async def require_admin(
+    current_user: CurrentUser,
+    db: DbSession,
+) -> User:
+    """Require the current user to have ADMIN role."""
+    from sqlalchemy.orm import selectinload
+
+    # Reload user with roles
+    result = await db.execute(
+        select(User)
+        .where(User.id == current_user.id)
+        .options(selectinload(User.roles).selectinload(UserRole.role))
+    )
+    user = result.scalar_one()
+
+    role_names = [ur.role.name for ur in user.roles]
+    if "ADMIN" not in role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return user
+
+
+# Admin type alias
+AdminUser = Annotated[User, Depends(require_admin)]

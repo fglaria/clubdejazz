@@ -1,0 +1,132 @@
+"""Admin-specific schemas."""
+
+from datetime import date, datetime
+from decimal import Decimal
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+from app.models.membership import MembershipStatus
+from app.models.payment import FeeType, PaymentMethod, PaymentStatus
+
+
+# === Membership Admin Schemas ===
+
+class MembershipApprove(BaseModel):
+    """Approve or reject membership application."""
+
+    action: str = Field(..., pattern="^(approve|reject)$")
+    notes: str | None = None
+
+
+class MembershipStatusUpdate(BaseModel):
+    """Update membership status."""
+
+    status: MembershipStatus
+    notes: str | None = None
+
+
+class MembershipListResponse(BaseModel):
+    """Membership with user info for admin list."""
+
+    id: UUID
+    user_id: UUID
+    user_email: str
+    user_full_name: str
+    membership_type_code: str
+    membership_type_name: str
+    status: MembershipStatus
+    start_date: date
+    end_date: date | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# === Payment Admin Schemas ===
+
+class PaymentCreate(BaseModel):
+    """Record a new payment (admin)."""
+
+    membership_id: UUID
+    fee_rate_id: UUID
+    payment_method: PaymentMethod
+    amount_clp: Decimal = Field(..., gt=0)
+    payment_date: date
+    period_month: int | None = Field(None, ge=1, le=12)
+    period_year: int | None = Field(None, ge=2020, le=2100)
+    gateway_transaction_id: str | None = None
+    transfer_proof_url: str | None = None
+    notes: str | None = None
+
+
+class PaymentConfirm(BaseModel):
+    """Confirm or reject a pending payment."""
+
+    action: str = Field(..., pattern="^(confirm|reject)$")
+    notes: str | None = None
+
+
+class PaymentResponse(BaseModel):
+    """Payment response with related info."""
+
+    id: UUID
+    membership_id: UUID
+    user_email: str
+    user_full_name: str
+    fee_type: FeeType
+    amount_clp: Decimal
+    payment_method: PaymentMethod
+    payment_date: date
+    period_month: int | None
+    period_year: int | None
+    status: PaymentStatus
+    gateway_transaction_id: str | None
+    transfer_proof_url: str | None
+    notes: str | None
+    confirmed_by: UUID | None
+    confirmed_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# === Event Admin Schemas ===
+
+class EventCreate(BaseModel):
+    """Create a new event."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    event_date: datetime
+    location: str | None = Field(None, max_length=255)
+    address: str | None = Field(None, max_length=500)
+    image_url: str | None = Field(None, max_length=500)
+    is_published: bool = False
+
+
+class EventUpdate(BaseModel):
+    """Update an event."""
+
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    event_date: datetime | None = None
+    location: str | None = Field(None, max_length=255)
+    address: str | None = Field(None, max_length=500)
+    image_url: str | None = Field(None, max_length=500)
+    is_published: bool | None = None
+
+
+# === Fee Rate Admin Schemas ===
+
+class FeeRateCreate(BaseModel):
+    """Create a new fee rate."""
+
+    fee_type: FeeType
+    membership_type_id: UUID
+    amount_utm: Decimal = Field(..., gt=0)
+    utm_to_clp_rate: Decimal | None = Field(None, gt=0)
+    amount_clp: Decimal | None = Field(None, gt=0)
+    effective_from: date
+    effective_until: date | None = None
+    reason: str | None = None
