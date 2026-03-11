@@ -30,13 +30,27 @@ async function request<T>(
   return res.json();
 }
 
-// Auth
+// Auth — backend uses OAuth2PasswordRequestForm (form data, field "username")
 export const authApi = {
-  login: (email: string, password: string) =>
-    request<{ access_token: string }>("/api/auth/login", {
+  login: async (email: string, password: string) => {
+    const form = new URLSearchParams();
+    form.append("username", email);
+    form.append("password", password);
+    const token = getToken();
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail ?? "Error al iniciar sesión");
+    }
+    return res.json() as Promise<{ access_token: string }>;
+  },
 };
 
 // Members (users)
