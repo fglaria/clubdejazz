@@ -88,4 +88,4 @@ async def require_admin(
 
 
 # Admin type alias
-AdminUser = Annotated[User, Depends(require_admin)]
+AdminDependency = Annotated[User, Depends(require_admin)]

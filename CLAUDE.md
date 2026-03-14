@@ -1,5 +1,7 @@
 # CLAUDE.md - Club de Jazz Intranet
 
+> **Note:** Only the `intranet/` folder is a git repo. Parent `clubdejazz/` is not tracked.
+
 ## Overview
 
 Member management webapp for Club de Jazz de Concepción.
@@ -65,14 +67,40 @@ psql "$DATABASE_URL" -c "SELECT version();"
 
 ## Deployment
 
-- **Render service**: `clubdejazz` (https://clubdejazz.onrender.com)
 - **Repo**: https://github.com/fglaria/clubdejazz
 - **Auto-deploy**: On push to main branch
 
-### Render Config
+### Render Services (workspace: ClubDeJazz, ID: tea-d6mp5275r7bs73cj9790)
 
-- Backend: `rootDir: backend`, Python runtime
-- Frontend: `rootDir: frontend`, Static site
+| Service | ID | URL | rootDir | Runtime |
+|---------|-----|-----|---------|---------|
+| clubdejazz (backend) | srv-d6mp6qlm5p6s73fvlun0 | https://clubdejazz.onrender.com | `backend` | Python |
+| clubdejazz-web (frontend) | srv-d6olck15pdvs73em3psg | https://clubdejazz-web.onrender.com | `frontend` | Node |
+
+**When checking Render:** Always select workspace `ClubDeJazz` (ID: `tea-d6mp5275r7bs73cj9790`) directly — never list workspaces or ask which one.
+
+### Environment Variables
+
+| Service | Key | Value |
+|---------|-----|-------|
+| Frontend | `NEXT_PUBLIC_API_URL` | `https://clubdejazz.onrender.com` |
+
+## Admin Pages
+
+The frontend includes admin pages at `/admin/*`:
+
+| Route | Description |
+|-------|-------------|
+| `/admin/members` | List memberships, filter by status, approve/reject pending |
+| `/admin/payments` | List payments, filter by status, confirm/reject pending |
+| `/admin/events` | Full CRUD for events, publish/unpublish toggle |
+
+## Known Issues
+
+### bcrypt/passlib compatibility
+- **Issue**: passlib 1.7.4 is incompatible with bcrypt >= 4.1.0
+- **Cause**: bcrypt 4.1 added strict 72-byte password limit; passlib uses >72 byte test strings internally
+- **Fix**: Pin `bcrypt>=4.0.0,<4.1.0` in requirements.txt
 
 ## Key Business Rules
 
