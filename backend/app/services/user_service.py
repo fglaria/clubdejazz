@@ -6,14 +6,40 @@ from sqlalchemy import select, Result
 from fastapi import HTTPException, status, Depends
 
 from app.core.deps import DbSession
-from app.core.security import get_password_hash
+from app.core.security import verify_password, get_password_hash, create_access_token
 from app.models.user import User
-from app.schemas import UserRegister
+from app.schemas import Token, UserRegister
 
 
 class UserService:
     def __init__(self, db: DbSession):
         self.db = db
+
+    async def login(self, user_email: str, password: str) -> Token:
+        """Login and get access token."""
+        # Find user by email
+        query = (
+            select(User)
+            .where(User.email == user_email)
+        )
+        result = await self.db.execute(query)
+        user = result.scalar_one_or_none()
+
+        if not user or not verify_password(password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user",
+            )
+
+        access_token = create_access_token(subject=str(user.id))
+        return Token(access_token=access_token)
 
     async def get_all(self,
         *,
@@ -136,7 +162,8 @@ class UserService:
 
 
 def get_user_service(db: DbSession) -> UserService:
-   return UserService(db=db)
+    """Get User Service"""
+    return UserService(db=db)
 
 
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
