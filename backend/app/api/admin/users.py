@@ -3,7 +3,8 @@ from fastapi import APIRouter, Query
 from app.core.deps import AdminDependency
 from app.models.user import User
 from app.schemas.user import UserResponse
-from app.schemas.admin import UserStatusUpdate
+from app.schemas.admin import UserStatusUpdate, PasswordReset
+from app.core.security import get_password_hash
 from app.services.user_service import UserServiceDependency
 
 
@@ -41,3 +42,17 @@ async def update_user_status(
 ) -> dict:
     """Activate or deactivate a user (admin only)."""
     return await user_service.update_status(user_id=user_id, self_id=admin.id, is_active=body.is_active)
+
+
+@router.patch(path="/{user_id}/password")
+async def reset_user_password(
+    user_id: str,
+    body: PasswordReset,
+    admin: AdminDependency,
+    user_service: UserServiceDependency,
+) -> dict:
+    """Reset a user's password (admin only)."""
+    user = await user_service.get_one(user_id=user_id)
+    user.password_hash = get_password_hash(body.new_password)
+    await user_service.db.commit()
+    return {"user_id": str(user.id), "message": "Contraseña actualizada"}
