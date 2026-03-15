@@ -157,8 +157,8 @@ export default function PaymentsPage() {
                 <TableRow key={p.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{p.user_full_name}</p>
-                      <p className="text-sm text-slate-500">{p.user_email}</p>
+                      <p className="font-medium">{p.membership.user.full_name}</p>
+                      <p className="text-sm text-slate-500">{p.membership.user.email}</p>
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">

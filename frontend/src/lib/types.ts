@@ -38,9 +38,15 @@ export type FeeType = "MONTHLY" | "ANNUAL" | "INSCRIPTION" | "OTHER";
 export interface Payment {
   id: string;
   membership_id: string;
-  user_email: string;
-  user_full_name: string;
-  fee_type: FeeType;
+  membership: {
+    user: {
+      email: string;
+      full_name: string;
+    };
+  };
+  fee_rate: {
+    fee_type: FeeType;
+  };
   amount_clp: number;
   payment_method: PaymentMethod;
   payment_date: string;

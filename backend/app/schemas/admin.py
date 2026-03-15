@@ -86,14 +86,31 @@ class PaymentConfirm(BaseModel):
     notes: str | None = None
 
 
+class PaymentConfirmResponse(BaseModel):
+    id: str
+    status: str
+    message: str
+
+
+class FeeRateSummary(BaseModel):
+    fee_type: FeeType
+
+    model_config = {"from_attributes": True}
+
+
+class PaymentMembershipSummary(BaseModel):
+    user: UserSummary
+
+    model_config = {"from_attributes": True}
+
+
 class PaymentResponse(BaseModel):
     """Payment response with related info."""
 
     id: UUID
     membership_id: UUID
-    user_email: str
-    user_full_name: str
-    fee_type: FeeType
+    membership: PaymentMembershipSummary
+    fee_rate: FeeRateSummary
     amount_clp: Decimal
     payment_method: PaymentMethod
     payment_date: date
