@@ -7,6 +7,7 @@ import type {
   Payment,
   PaymentStatus,
   User,
+  UserSummary,
 } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -117,6 +118,11 @@ export const adminApi = {
         `/api/admin/memberships/${id}/status`,
         { method: "PATCH", body: JSON.stringify({ status, notes }) }
       ),
+    assign: (data: { user_id: string; membership_type_code: string }) =>
+      request<Membership>("/api/admin/memberships/assign", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 
   // Payments
@@ -209,6 +215,8 @@ export const adminApi = {
         `/api/admin/users/${userId}/password`,
         { method: "PATCH", body: JSON.stringify({ new_password: newPassword }) }
       ),
+    withoutMembership: () =>
+      request<UserSummary[]>("/api/admin/users/without-membership"),
   },
 
   // Members (create user + membership in one step)
