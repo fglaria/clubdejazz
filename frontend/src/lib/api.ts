@@ -204,5 +204,29 @@ export const adminApi = {
         `/api/admin/users/${id}/status?is_active=${is_active}`,
         { method: "PATCH" }
       ),
+    resetPassword: (userId: string, newPassword: string) =>
+      request<{ user_id: string; message: string }>(
+        `/api/admin/users/${userId}/password`,
+        { method: "PATCH", body: JSON.stringify({ new_password: newPassword }) }
+      ),
+  },
+
+  // Members (create user + membership in one step)
+  members: {
+    create: (data: {
+      email: string;
+      password: string;
+      first_name: string;
+      last_name_1: string;
+      rut: string;
+      middle_name?: string;
+      last_name_2?: string;
+      phone?: string;
+      membership_type_code: string;
+    }) =>
+      request<Membership>("/api/admin/members", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 };
