@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.membership import MembershipStatus
 from app.models.payment import FeeType, PaymentMethod, PaymentStatus
@@ -148,3 +148,25 @@ class FeeRateCreate(BaseModel):
     effective_from: date
     effective_until: date | None = None
     reason: str | None = None
+
+
+# === Member Admin Schemas ===
+
+class AdminMemberCreate(BaseModel):
+    """Create a new user + active membership (admin)."""
+
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name_1: str = Field(..., min_length=1, max_length=50)
+    rut: str = Field(..., min_length=8, max_length=12)
+    middle_name: str | None = Field(None, max_length=50)
+    last_name_2: str | None = Field(None, max_length=50)
+    phone: str | None = Field(None, max_length=20)
+    membership_type_code: str = Field(..., description="NUMERARIO, HONORARIO, FUNDADOR, ESTUDIANTE")
+
+
+class PasswordReset(BaseModel):
+    """Reset a user's password (admin)."""
+
+    new_password: str = Field(..., min_length=8)
