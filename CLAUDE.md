@@ -91,9 +91,22 @@ The frontend includes admin pages at `/admin/*`:
 
 | Route | Description |
 |-------|-------------|
-| `/admin/members` | List memberships, filter by status, approve/reject pending |
+| `/admin/members` | List memberships, filter by status, approve/reject pending, create new member (user+membership), assign membership to existing user, reset password |
 | `/admin/payments` | List payments, filter by status, confirm/reject pending |
 | `/admin/events` | Full CRUD for events, publish/unpublish toggle |
+
+## Development Workflow
+
+New features follow a two-phase approach:
+
+1. **MVP first**: Write fast, functional code to get the feature working. Prioritize correctness and speed of delivery over architecture. Direct DB queries in endpoints, minimal abstraction, inline logic — all acceptable.
+2. **Manual review then refactor**: The user reviews the working code and decides when/if to refactor it. Claude should not preemptively refactor MVP code unless asked.
+
+**Existing examples**:
+- `payments/`, `events/` — MVP-style (direct logic in endpoints, acceptable for now)
+- `admin/`, `memberships/` — already refactored with service layer pattern
+
+When implementing new features, default to MVP style unless the user explicitly asks for the service layer pattern.
 
 ## Known Issues
 
