@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
@@ -58,14 +60,12 @@ async def create_event(
 
 
 @router.get(path="/{event_id}", response_model=EventResponse)
-async def get_event_admin(
+async def get_event(
     event_id: str,
     admin: AdminDependency,
     db: DbSession,
 ) -> Event:
     """Get any event including unpublished (admin only)."""
-    from uuid import UUID
-
     try:
         eid = UUID(event_id)
     except ValueError:
@@ -96,8 +96,6 @@ async def update_event(
     db: DbSession,
 ) -> Event:
     """Update an event (admin only)."""
-    from uuid import UUID
-
     try:
         eid = UUID(event_id)
     except ValueError:
@@ -134,8 +132,6 @@ async def delete_event(
     db: DbSession,
 ) -> None:
     """Delete an event (admin only)."""
-    from uuid import UUID
-
     try:
         eid = UUID(event_id)
     except ValueError:

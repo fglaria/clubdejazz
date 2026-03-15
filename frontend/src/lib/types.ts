@@ -6,13 +6,23 @@ export type MembershipStatus =
   | "EXPIRED"
   | "CANCELLED";
 
+export interface UserSummary {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+export interface MembershipTypeSummary {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export interface Membership {
   id: string;
   user_id: string;
-  user_email: string;
-  user_full_name: string;
-  membership_type_code: string;
-  membership_type_name: string;
+  user: UserSummary;
+  membership_type: MembershipTypeSummary;
   status: MembershipStatus;
   start_date: string;
   end_date: string | null;

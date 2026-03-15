@@ -2,17 +2,17 @@
 from uuid import UUID
 from typing import Annotated
 
-from sqlalchemy import select, Result
 from fastapi import HTTPException, status, Depends
+from sqlalchemy import select, Result
 
-from app.core.deps import DbSession
+from app.core.deps import AsyncSession, DbSession
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.models.user import User
 from app.schemas import Token, UserRegister
 
 
 class UserService:
-    def __init__(self, db: DbSession):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     async def login(self, user_email: str, password: str) -> Token:
@@ -61,7 +61,7 @@ class UserService:
         result: Result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def get_one(self, user_id: str) -> User | None:
+    async def get_one(self, user_id: str) -> User:
         """Get a user by user_id."""
         try:
             uid: UUID = UUID(user_id)
@@ -132,17 +132,11 @@ class UserService:
     async def update_status(self,
         *,
         user_id: str,
-        self_id: str,
+        self_id: UUID,
         is_active: bool
     ) -> dict:
         """Activate or deactivate a user by user_id."""
-        user: User | None = await self.get_one(user_id=user_id)
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        user: User = await self.get_one(user_id=user_id)
 
         if user.id == self_id:
             raise HTTPException(

@@ -26,15 +26,33 @@ class MembershipStatusUpdate(BaseModel):
     notes: str | None = None
 
 
+class UserSummary(BaseModel):
+    id: UUID
+    email: str
+    full_name: str
+
+    model_config = {"from_attributes": True}
+
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
+
+
+class MembershipTypeSummary(BaseModel):
+    id: UUID
+    code: str
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class MembershipListResponse(BaseModel):
     """Membership with user info for admin list."""
 
     id: UUID
     user_id: UUID
-    user_email: str
-    user_full_name: str
-    membership_type_code: str
-    membership_type_name: str
+    user: UserSummary
+    membership_type: MembershipTypeSummary
     status: MembershipStatus
     start_date: date
     end_date: date | None

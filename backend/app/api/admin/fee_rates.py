@@ -8,7 +8,7 @@ from app.schemas.admin import FeeRateCreate
 from app.schemas.membership import FeeRateResponse
 
 
-router: APIRouter = APIRouter(prefix="/fee-rates")
+router: APIRouter = APIRouter(prefix="/fee-rates", tags=["fee-rates"])
 
 
 @router.post(path="", response_model=FeeRateResponse, status_code=status.HTTP_201_CREATED)

@@ -122,7 +122,6 @@ class Membership(Base):
     approver: Mapped["User | None"] = relationship("User", foreign_keys=[approved_by])
     payments: Mapped[list["Payment"]] = relationship("Payment", back_populates="membership")
 
-
 class OrganizationDetails(Base):
     """Organization details for Honorario persona jurídica."""
 

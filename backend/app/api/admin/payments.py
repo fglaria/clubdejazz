@@ -1,7 +1,9 @@
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.deps import AdminDependency, DbSession
 from app.models.payment import Payment, PaymentStatus, FeeRate
@@ -143,8 +145,6 @@ async def confirm_payment(
     db: DbSession,
 ) -> dict:
     """Confirm or reject a pending payment."""
-    from uuid import UUID
-
     try:
         pid = UUID(payment_id)
     except ValueError:
@@ -173,7 +173,7 @@ async def confirm_payment(
     if confirmation.action == "confirm":
         payment.status = PaymentStatus.CONFIRMED
         payment.confirmed_by = admin.id
-        payment.confirmed_at = datetime.now()
+        payment.confirmed_at = datetime.now(timezone.utc)
     else:
         payment.status = PaymentStatus.REJECTED
 

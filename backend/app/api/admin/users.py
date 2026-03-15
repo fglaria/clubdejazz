@@ -3,6 +3,7 @@ from fastapi import APIRouter, Query
 from app.core.deps import AdminDependency
 from app.models.user import User
 from app.schemas.user import UserResponse
+from app.schemas.admin import UserStatusUpdate
 from app.services.user_service import UserServiceDependency
 
 
@@ -34,9 +35,9 @@ async def get_user(
 @router.patch(path="/{user_id}/status")
 async def update_user_status(
     user_id: str,
-    is_active: bool,
+    body: UserStatusUpdate,
     admin: AdminDependency,
     user_service: UserServiceDependency
 ) -> dict:
     """Activate or deactivate a user (admin only)."""
-    return await user_service.update_status(user_id=user_id, self_id=admin.id, is_active=is_active)
+    return await user_service.update_status(user_id=user_id, self_id=admin.id, is_active=body.is_active)

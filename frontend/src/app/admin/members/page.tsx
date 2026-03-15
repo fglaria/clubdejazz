@@ -149,11 +149,11 @@ export default function MembersPage() {
                 <TableRow key={m.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{m.user_full_name}</p>
-                      <p className="text-sm text-slate-500">{m.user_email}</p>
+                      <p className="font-medium">{m.user.full_name}</p>
+                      <p className="text-sm text-slate-500">{m.user.email}</p>
                     </div>
                   </TableCell>
-                  <TableCell>{m.membership_type_name}</TableCell>
+                  <TableCell>{m.membership_type.name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={statusColors[m.status]}>
                       {statusLabels[m.status]}
