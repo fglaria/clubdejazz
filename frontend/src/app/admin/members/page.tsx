@@ -81,6 +81,10 @@ export default function MembersPage() {
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
+  // Assign membership dialog state
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignForm, setAssignForm] = useState({ user_id: "", membership_type_code: "NUMERARIO" });
+
   const { data: memberships, isLoading } = useQuery({
     queryKey: ["admin", "memberships", statusFilter],
     queryFn: () =>
@@ -90,6 +94,12 @@ export default function MembersPage() {
   const { data: pendingCount } = useQuery({
     queryKey: ["admin", "memberships", "pendingCount"],
     queryFn: () => adminApi.memberships.pendingCount(),
+  });
+
+  const { data: usersWithoutMembership } = useQuery({
+    queryKey: ["admin", "users", "withoutMembership"],
+    queryFn: () => adminApi.users.withoutMembership(),
+    enabled: assignOpen,
   });
 
   const reviewMutation = useMutation({
@@ -129,6 +139,22 @@ export default function MembersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const assignMutation = useMutation({
+    mutationFn: () =>
+      adminApi.memberships.assign({
+        user_id: assignForm.user_id,
+        membership_type_code: assignForm.membership_type_code,
+      }),
+    onSuccess: () => {
+      toast.success("Membresía asignada");
+      queryClient.invalidateQueries({ queryKey: ["admin", "memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "withoutMembership"] });
+      setAssignOpen(false);
+      setAssignForm({ user_id: "", membership_type_code: "NUMERARIO" });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -157,6 +183,9 @@ export default function MembersPage() {
               <SelectItem value="CANCELLED">Cancelados</SelectItem>
             </SelectContent>
           </Select>
+          <Button size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
+            Asignar Membresía
+          </Button>
           <Button size="sm" onClick={() => setNewMemberOpen(true)}>
             <UserPlus className="h-4 w-4 mr-1" />
             Nuevo Socio
@@ -401,6 +430,76 @@ export default function MembersPage() {
               disabled={resetPasswordMutation.isPending || newPassword.length < 8}
             >
               {resetPasswordMutation.isPending ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign membership dialog */}
+      <Dialog
+        open={assignOpen}
+        onOpenChange={(open) => {
+          setAssignOpen(open);
+          if (!open) setAssignForm({ user_id: "", membership_type_code: "NUMERARIO" });
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Asignar Membresía</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Usuario</Label>
+              <Select
+                value={assignForm.user_id}
+                onValueChange={(v) => setAssignForm({ ...assignForm, user_id: v ?? assignForm.user_id })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar usuario..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {usersWithoutMembership?.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.full_name} ({u.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Tipo de membresía</Label>
+              <Select
+                value={assignForm.membership_type_code}
+                onValueChange={(v) => setAssignForm({ ...assignForm, membership_type_code: v ?? assignForm.membership_type_code })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {membershipTypeOptions.map((t) => (
+                    <SelectItem key={t.code} value={t.code}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAssignOpen(false);
+                setAssignForm({ user_id: "", membership_type_code: "NUMERARIO" });
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => assignMutation.mutate()}
+              disabled={assignMutation.isPending || !assignForm.user_id}
+            >
+              {assignMutation.isPending ? "Asignando..." : "Asignar"}
             </Button>
           </DialogFooter>
         </DialogContent>
