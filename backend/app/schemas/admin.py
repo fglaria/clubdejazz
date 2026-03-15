@@ -170,3 +170,10 @@ class PasswordReset(BaseModel):
     """Reset a user's password (admin)."""
 
     new_password: str = Field(..., min_length=8)
+
+
+class MembershipAssign(BaseModel):
+    """Assign an existing user to an active membership (admin)."""
+
+    user_id: UUID
+    membership_type_code: str = Field(..., description="NUMERARIO, HONORARIO, FUNDADOR, ESTUDIANTE")
