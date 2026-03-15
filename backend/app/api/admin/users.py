@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Query
 
-from app.core.deps import AdminDependency
+from sqlalchemy import select
+from app.core.deps import AdminDependency, DbSession
+from app.models.membership import Membership, MembershipStatus
 from app.models.user import User
 from app.schemas.user import UserResponse
-from app.schemas.admin import UserStatusUpdate, PasswordReset
+from app.schemas.admin import UserStatusUpdate, PasswordReset, UserSummary
 from app.core.security import get_password_hash
 from app.services.user_service import UserServiceDependency
 
@@ -21,6 +23,25 @@ async def list_users(
 ) -> list[User]:
     """List all users (admin only)."""
     return await user_service.get_all(active_only=active_only, limit=limit, offset=offset)
+
+
+@router.get(path="/without-membership", response_model=list[UserSummary])
+async def list_users_without_membership(
+    admin: AdminDependency,
+    db: DbSession,
+) -> list[User]:
+    """List active users with no ACTIVE or PENDING membership (admin only)."""
+    subquery = (
+        select(Membership.user_id)
+        .where(Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.PENDING]))
+    )
+    result = await db.execute(
+        select(User)
+        .where(User.is_active.is_(True))
+        .where(~User.id.in_(subquery))
+        .order_by(User.created_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 @router.get(path="/{user_id}", response_model=UserResponse)
