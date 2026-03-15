@@ -104,7 +104,7 @@ export const adminApi = {
   memberships: {
     list: (status?: MembershipStatus) =>
       request<Membership[]>(
-        `/api/admin/memberships${status ? `?status=${status}` : ""}`
+        `/api/admin/memberships?limit=500${status ? `&status=${status}` : ""}`
       ),
     pendingCount: () =>
       request<{ count: number }>("/api/admin/memberships/pending/count"),

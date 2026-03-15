@@ -8,8 +8,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import AsyncSession, DbSession
 from app.models.membership import Membership, MembershipType, MembershipStatus
-from app.schemas.admin import MembershipApprove, MembershipStatusUpdate
+from app.models.user import User
+from app.schemas.admin import MembershipApprove, MembershipStatusUpdate, MembershipAssign
 from app.schemas.membership import MembershipApply
+from app.services.user import UserServiceDependency
 
 
 class MembershipService:
@@ -132,10 +134,11 @@ class MembershipService:
     async def apply(self, user_id: str, application: MembershipApply) -> Membership:
         """Apply for a membership."""
         # Check if user already has an active or pending membership
+        valid_statuses: list[MembershipStatus] = [MembershipStatus.ACTIVE, MembershipStatus.PENDING]
         query = (
             select(Membership)
             .where(Membership.user_id == user_id)
-            .where(Membership.status.in_([MembershipStatus.ACTIVE, MembershipStatus.PENDING]))
+            .where(Membership.status.in_(valid_statuses))
         )
 
         result: Result = await self.db.execute(query)
@@ -184,6 +187,68 @@ class MembershipService:
         result = await self.db.execute(query)
         return result.scalar_one()
 
+    async def assign_to_user(self,
+        body: MembershipAssign,
+        admin_id: UUID,
+        user_service: UserServiceDependency
+    ) -> Membership:
+        """Assign an active membership to an existing user (admin only)."""
+        # Fetch user to check if exists
+        user: User = user_service.get_one(user_id=body.user_id)
+
+        # Check no ACTIVE or PENDING membership
+        valid_statuses: list[MembershipStatus] = [MembershipStatus.ACTIVE, MembershipStatus.PENDING]
+        query = (
+            select(Membership)
+            .where(Membership.user_id == body.user_id)
+            .where(Membership.status.in_(valid_statuses))
+        )
+
+        result: Result = await self.db.execute(query)
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuario ya tiene una membresía activa o pendiente",
+            )
+
+        # Resolve membership type
+        query = (
+            select(MembershipType)
+            .where(MembershipType.code == body.membership_type_code.upper())
+        )
+
+        result = await self.db.execute(query)
+        membership_type: MembershipType | None = result.scalar_one_or_none()
+        if not membership_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tipo de membresía no válido"
+            )
+
+        # Create active membership
+        membership: Membership = Membership(
+            user_id=user.id,
+            membership_type_id=membership_type.id,
+            status=MembershipStatus.ACTIVE,
+            start_date=date.today(),
+            approved_by=admin_id,
+            approved_at=datetime.now(),
+        )
+        self.db.add(membership)
+        await self.db.commit()
+
+        # Re-query with relationships loaded
+        query = (
+            select(Membership)
+            .where(Membership.id == membership.id)
+            .options(
+                selectinload(Membership.user),
+                selectinload(Membership.membership_type),
+            )
+        )
+
+        result = await self.db.execute(query)
+        return result.scalar_one()
 
     async def count_type(self, membership_status: MembershipStatus) -> dict:
         """Count membership applications of specified status."""
@@ -200,8 +265,6 @@ class MembershipService:
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
-
-
 
 
 def get_membership_service(db: DbSession) -> MembershipService:

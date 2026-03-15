@@ -10,6 +10,7 @@ export interface UserSummary {
   id: string;
   email: string;
   full_name: string;
+  member_number: number | null;
 }
 
 export interface MembershipTypeSummary {

@@ -30,6 +30,7 @@ class UserSummary(BaseModel):
     id: UUID
     email: str
     full_name: str
+    member_number: int | None = None
 
     model_config = {"from_attributes": True}
 

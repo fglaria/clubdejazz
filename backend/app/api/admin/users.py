@@ -7,7 +7,7 @@ from app.models.user import User
 from app.schemas.user import UserResponse
 from app.schemas.admin import UserStatusUpdate, PasswordReset, UserSummary
 from app.core.security import get_password_hash
-from app.services.user_service import UserServiceDependency
+from app.services.user import UserServiceDependency
 
 
 router: APIRouter = APIRouter(prefix="/users")

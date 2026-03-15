@@ -13,6 +13,7 @@ from app.schemas.admin import (
     PaymentCreate,
     PaymentResponse,
 )
+from app.services.payment import PaymentServiceDependency
 
 router: APIRouter = APIRouter(prefix="/payments")
 
@@ -20,51 +21,13 @@ router: APIRouter = APIRouter(prefix="/payments")
 @router.get(path="", response_model=list[PaymentResponse])
 async def list_payments(
     admin: AdminDependency,
-    db: DbSession,
-    status_filter: PaymentStatus | None = Query(None, alias="status"),
-    limit: int = Query(50, le=100),
-    offset: int = Query(0, ge=0),
+    payment_service: PaymentServiceDependency,
+    status_filter: PaymentStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=50, le=100),
+    offset: int = Query(default=0, ge=0)
 ) -> list[dict]:
     """List all payments (admin only)."""
-    query = (
-        select(Payment)
-        .options(
-            selectinload(Payment.membership).selectinload(Membership.user),
-            selectinload(Payment.fee_rate),
-        )
-        .order_by(Payment.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
-
-    if status_filter:
-        query = query.where(Payment.status == status_filter)
-
-    result = await db.execute(query)
-    payments = result.scalars().all()
-
-    return [
-        {
-            "id": p.id,
-            "membership_id": p.membership_id,
-            "user_email": p.membership.user.email,
-            "user_full_name": p.membership.user.full_name,
-            "fee_type": p.fee_rate.fee_type,
-            "amount_clp": p.amount_clp,
-            "payment_method": p.payment_method,
-            "payment_date": p.payment_date,
-            "period_month": p.period_month,
-            "period_year": p.period_year,
-            "status": p.status,
-            "gateway_transaction_id": p.gateway_transaction_id,
-            "transfer_proof_url": p.transfer_proof_url,
-            "notes": p.notes,
-            "confirmed_by": p.confirmed_by,
-            "confirmed_at": p.confirmed_at,
-            "created_at": p.created_at,
-        }
-        for p in payments
-    ]
+    return await payment_service.get_all(status_filter=status_filter, limit=limit, offset=offset)
 
 
 @router.post(path="", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)

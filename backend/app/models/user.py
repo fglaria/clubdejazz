@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +32,7 @@ class User(Base):
     last_name_1: Mapped[str] = mapped_column(String(50), nullable=False)
     last_name_2: Mapped[str | None] = mapped_column(String(50))
     rut: Mapped[str] = mapped_column(String(12), unique=True, nullable=False)
+    member_number: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)

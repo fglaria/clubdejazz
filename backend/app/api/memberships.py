@@ -5,17 +5,17 @@ from fastapi import APIRouter, HTTPException, status
 from app.core.deps import CurrentUser
 from app.models import Membership, MembershipType
 from app.schemas.membership import MembershipApply, MembershipResponse, MembershipTypeResponse
-from app.services.membership_service import MembershipServiceDependency
+from app.services.membership import MembershipServiceDependency
 
 router = APIRouter(prefix="/memberships", tags=["memberships"])
 
 
 @router.get(path="/types", response_model=list[MembershipTypeResponse])
 async def list_membership_types(
-        membership_dependency: MembershipServiceDependency
+        membership_service: MembershipServiceDependency
 ) -> list[MembershipType]:
     """List all membership types."""
-    return await membership_dependency.get_types()
+    return await membership_service.get_types()
 
 
 @router.post(path="/apply", response_model=MembershipResponse, status_code=status.HTTP_201_CREATED)

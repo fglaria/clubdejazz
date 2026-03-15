@@ -2,13 +2,14 @@
 
 from fastapi import APIRouter
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.deps import CurrentUser
 from app.schemas import UserMe, UserUpdate
+from app.services.user import UserServiceDependency
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/me", response_model=UserMe)
+@router.get(path="/me", response_model=UserMe)
 async def get_me(current_user: CurrentUser) -> UserMe:
     """Get current user profile."""
     return UserMe(
@@ -28,20 +29,14 @@ async def get_me(current_user: CurrentUser) -> UserMe:
     )
 
 
-@router.put("/me", response_model=UserMe)
+@router.put(path="/me", response_model=UserMe)
 async def update_me(
     user_in: UserUpdate,
     current_user: CurrentUser,
-    db: DbSession,
+    user_service: UserServiceDependency,
 ) -> UserMe:
     """Update current user profile."""
-    update_data = user_in.model_dump(exclude_unset=True)
-
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-
-    await db.commit()
-    await db.refresh(current_user)
+    current_user = user_service.update_one(user_in=user_in, current_user=current_user)
 
     return UserMe(
         id=current_user.id,

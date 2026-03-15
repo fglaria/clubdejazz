@@ -8,7 +8,7 @@ from sqlalchemy import select, Result
 from app.core.deps import AsyncSession, DbSession
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.models.user import User
-from app.schemas import Token, UserRegister
+from app.schemas import Token, UserRegister, UserUpdate
 
 
 class UserService:
@@ -128,6 +128,18 @@ class UserService:
         await self.db.refresh(user)
 
         return user
+
+    async def update_one(self, user_in: UserUpdate, current_user: User) -> User:
+        """Update current user profile."""
+        update_data = user_in.model_dump(exclude_unset=True)
+
+        for field, value in update_data.items():
+            setattr(current_user, field, value)
+
+        await self.db.commit()
+        await self.db.refresh(current_user)
+
+        return current_user
 
     async def update_status(self,
         *,

@@ -32,7 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, KeyRound, UserPlus } from "lucide-react";
+import { CheckCircle, XCircle, KeyRound, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 const statusLabels: Record<MembershipStatus, string> = {
   PENDING: "Pendiente",
@@ -72,6 +72,7 @@ const emptyForm = {
 export default function MembersPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<MembershipStatus | "ALL">("ALL");
+  const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" }>({ col: "member_number", dir: "asc" });
 
   // Create member dialog state
   const [newMemberOpen, setNewMemberOpen] = useState(false);
@@ -155,6 +156,37 @@ export default function MembersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const toggleSort = (col: string) =>
+    setSort((s) => s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" });
+
+  const SortIcon = ({ col }: { col: string }) => {
+    if (sort.col !== col) return <ChevronsUpDown className="h-3 w-3 ml-1 text-slate-400" />;
+    return sort.dir === "asc"
+      ? <ChevronUp className="h-3 w-3 ml-1" />
+      : <ChevronDown className="h-3 w-3 ml-1" />;
+  };
+
+  const sorted = [...(memberships ?? [])].sort((a, b) => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    switch (sort.col) {
+      case "member_number": {
+        const an = a.user.member_number ?? Infinity;
+        const bn = b.user.member_number ?? Infinity;
+        return (an - bn) * dir;
+      }
+      case "name":
+        return a.user.full_name.localeCompare(b.user.full_name, "es") * dir;
+      case "type":
+        return a.membership_type.name.localeCompare(b.membership_type.name, "es") * dir;
+      case "status":
+        return a.status.localeCompare(b.status) * dir;
+      case "start_date":
+        return (a.start_date > b.start_date ? 1 : -1) * dir;
+      default:
+        return 0;
+    }
+  });
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -197,10 +229,17 @@ export default function MembersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Socio</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Fecha inicio</TableHead>
+              {[
+                { col: "member_number", label: "#", className: "w-16 cursor-pointer select-none" },
+                { col: "name", label: "Socio", className: "cursor-pointer select-none" },
+                { col: "type", label: "Tipo", className: "cursor-pointer select-none" },
+                { col: "status", label: "Estado", className: "cursor-pointer select-none" },
+                { col: "start_date", label: "Fecha inicio", className: "cursor-pointer select-none" },
+              ].map(({ col, label, className }) => (
+                <TableHead key={col} className={className} onClick={() => toggleSort(col)}>
+                  <span className="inline-flex items-center">{label}<SortIcon col={col} /></span>
+                </TableHead>
+              ))}
               <TableHead className="text-right w-36">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -208,6 +247,7 @@ export default function MembersPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
+                  <TableCell><Skeleton className="h-5 w-8" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -217,13 +257,16 @@ export default function MembersPage() {
               ))
             ) : memberships?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   No hay membresías
                 </TableCell>
               </TableRow>
             ) : (
-              memberships?.map((m: Membership) => (
+              sorted.map((m: Membership) => (
                 <TableRow key={m.id}>
+                  <TableCell className="text-slate-400 text-sm">
+                    {m.user.member_number ?? "—"}
+                  </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{m.user.full_name}</p>
