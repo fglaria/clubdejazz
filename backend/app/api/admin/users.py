@@ -29,7 +29,7 @@ async def list_users(
 async def list_users_without_membership(
     admin: AdminDependency,
     db: DbSession,
-) -> list[User]:
+) -> list[UserSummary]:
     """List active users with no ACTIVE or PENDING membership (admin only)."""
     subquery = (
         select(Membership.user_id)
