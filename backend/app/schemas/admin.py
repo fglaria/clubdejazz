@@ -30,6 +30,7 @@ class UserSummary(BaseModel):
     id: UUID
     email: str
     full_name: str
+    phone: str | None = None
     member_number: int | None = None
 
     model_config = {"from_attributes": True}
@@ -100,6 +101,7 @@ class FeeRateSummary(BaseModel):
 
 class PaymentMembershipSummary(BaseModel):
     user: UserSummary
+    start_date: date
 
     model_config = {"from_attributes": True}
 
