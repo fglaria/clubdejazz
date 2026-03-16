@@ -39,9 +39,11 @@ export interface Payment {
   id: string;
   membership_id: string;
   membership: {
+    start_date: string;
     user: {
       email: string;
       full_name: string;
+      member_number: number | null;
     };
   };
   fee_rate: {
