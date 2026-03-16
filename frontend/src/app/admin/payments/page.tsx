@@ -116,9 +116,9 @@ function buildMemberRows(payments: Payment[]): MemberRow[] {
   }
 
   // Compute streak for each member
-  for (const row of map.values()) {
+  for (const row of Array.from(map.values())) {
     const confirmed = new Set<string>();
-    for (const [, p] of row.paymentsByMonth) {
+    for (const [, p] of Array.from(row.paymentsByMonth)) {
       if (p.status === "CONFIRMED") confirmed.add(`${p.period_year}-${String(p.period_month).padStart(2, "0")}`);
     }
     row.unpaidStreak = computeUnpaidStreak(confirmed);
@@ -245,7 +245,7 @@ export default function PaymentsPage() {
               Calendario
             </button>
           </div>
-          {viewMode === "table" && (
+          <div className={viewMode !== "table" ? "hidden" : ""}>
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as PaymentStatus | "ALL")}
@@ -261,7 +261,7 @@ export default function PaymentsPage() {
                 <SelectItem value="REFUNDED">Reembolsados</SelectItem>
               </SelectContent>
             </Select>
-          )}
+          </div>
         </div>
       </div>
 
