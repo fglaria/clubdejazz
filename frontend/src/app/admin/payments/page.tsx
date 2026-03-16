@@ -475,6 +475,7 @@ export default function PaymentsPage() {
               { cls: "bg-red-200",   label: "Sin pago (>5 meses)" },
               { cls: "bg-red-100",   label: "Rechazado" },
               { cls: "bg-slate-100", label: "Reembolsado" },
+              { cls: "bg-slate-50 border border-slate-200", label: "Sin membresía" },
             ].map(({ cls, label }) => (
               <span key={label} className="flex items-center gap-1.5">
                 <span className={`inline-block w-3 h-3 rounded-sm ${cls}`} />
