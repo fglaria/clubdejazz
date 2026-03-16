@@ -23,8 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle } from "lucide-react";
-import { ChevronLeft, ChevronRight, LayoutList, CalendarDays } from "lucide-react";
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight, LayoutList, CalendarDays } from "lucide-react";
 
 const statusLabels: Record<PaymentStatus, string> = {
   PENDING: "Pendiente",
@@ -200,7 +199,7 @@ export default function PaymentsPage() {
   const [calendarOffset, setCalendarOffset] = useState(0);
 
   const { data: allPayments, isLoading: calendarLoading } = useQuery({
-    queryKey: ["admin", "payments", "all"],
+    queryKey: ["admin", "payments", "calendar-all"],
     queryFn: () => adminApi.payments.list(),
     enabled: viewMode === "calendar",
   });
