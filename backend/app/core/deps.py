@@ -79,7 +79,7 @@ async def require_admin(
     user = result.scalar_one()
 
     role_names = [ur.role.name for ur in user.roles]
-    if "ADMIN" not in role_names:
+    if not {"ADMIN", "SUPER_ADMIN"} & set(role_names):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
