@@ -10,7 +10,16 @@ export interface UserSummary {
   id: string;
   email: string;
   full_name: string;
+  phone: string | null;
   member_number: number | null;
+  roles: string[];
+}
+
+export interface RoleAssignment {
+  id: string;
+  name: string;
+  description: string | null;
+  assigned_at: string;
 }
 
 export interface MembershipTypeSummary {

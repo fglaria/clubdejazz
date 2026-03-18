@@ -36,6 +36,11 @@ class UserSummary(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserSummaryWithRoles(UserSummary):
+    """UserSummary extended with role names. Used in membership list only."""
+    roles: list[str] = []
+
+
 class UserStatusUpdate(BaseModel):
     is_active: bool
 
@@ -53,7 +58,7 @@ class MembershipListResponse(BaseModel):
 
     id: UUID
     user_id: UUID
-    user: UserSummary
+    user: UserSummaryWithRoles
     membership_type: MembershipTypeSummary
     status: MembershipStatus
     start_date: date
@@ -197,3 +202,19 @@ class MembershipAssign(BaseModel):
 
     user_id: UUID
     membership_type_code: str = Field(..., description="NUMERARIO, HONORARIO, FUNDADOR, ESTUDIANTE")
+
+
+# === Role Admin Schemas ===
+
+class RoleAssignmentResponse(BaseModel):
+    """Role info as assigned to a user. Built manually — not from_attributes on UserRole."""
+    id: UUID           # Role.id
+    name: str          # Role.name
+    description: str | None  # Role.description
+    assigned_at: datetime    # UserRole.assigned_at
+
+
+class UserRoleUpdate(BaseModel):
+    """Assign or revoke a role from a user."""
+    role_name: str
+    action: str = Field(..., pattern="^(assign|revoke)$")

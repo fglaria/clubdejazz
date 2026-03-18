@@ -6,6 +6,7 @@ import type {
   MembershipStatus,
   Payment,
   PaymentStatus,
+  RoleAssignment,
   User,
   UserSummary,
 } from "./types";
@@ -217,6 +218,17 @@ export const adminApi = {
       ),
     withoutMembership: () =>
       request<UserSummary[]>("/api/admin/users/without-membership"),
+    getRoles: (userId: string) =>
+      request<RoleAssignment[]>(`/api/admin/users/${userId}/roles`),
+    updateRole: (
+      userId: string,
+      role_name: string,
+      action: "assign" | "revoke"
+    ) =>
+      request<{ user_id: string; role_name: string; action: string; message: string }>(
+        `/api/admin/users/${userId}/roles`,
+        { method: "POST", body: JSON.stringify({ role_name, action }) }
+      ),
   },
 
   // Members (create user + membership in one step)

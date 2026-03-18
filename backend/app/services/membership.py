@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import AsyncSession, DbSession
 from app.models.membership import Membership, MembershipType, MembershipStatus
 from app.models.user import User
+from app.models.role import UserRole
 from app.schemas.admin import MembershipApprove, MembershipStatusUpdate, MembershipAssign
 from app.schemas.membership import MembershipApply
 from app.services.user import UserServiceDependency
@@ -27,7 +28,9 @@ class MembershipService:
         query = (
             select(Membership)
             .options(
-                selectinload(Membership.user),
+                selectinload(Membership.user)
+                    .selectinload(User.roles)
+                    .selectinload(UserRole.role),
                 selectinload(Membership.membership_type),
             )
             .order_by(Membership.created_at.desc())
@@ -150,19 +153,10 @@ class MembershipService:
             )
 
         # Get membership type
-        application_code: str = application.membership_type_code.upper()
-        query = (
-            select(MembershipType)
-            .where(MembershipType.code == application_code)
+        membership_type_code: str = application.membership_type_code.upper()
+        membership_type: MembershipType = await self.get_type_by_code(
+            membership_type_code=membership_type_code
         )
-
-        result = await self.db.execute(query)
-        membership_type = result.scalar_one_or_none()
-        if not membership_type:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Membership type '{application_code}' not found",
-            )
 
         # Create membership application
         membership = Membership(
@@ -212,18 +206,10 @@ class MembershipService:
             )
 
         # Resolve membership type
-        query = (
-            select(MembershipType)
-            .where(MembershipType.code == body.membership_type_code.upper())
+        membership_type_code: str = body.membership_type_code.upper()
+        membership_type: MembershipType = await self.get_type_by_code(
+            membership_type_code=membership_type_code
         )
-
-        result = await self.db.execute(query)
-        membership_type: MembershipType | None = result.scalar_one_or_none()
-        if not membership_type:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tipo de membresía no válido"
-            )
 
         # Create active membership
         membership: Membership = Membership(
@@ -260,11 +246,28 @@ class MembershipService:
         return {"status": membership_status, "count": count}
 
     async def get_types(self) -> list[MembershipType]:
-        """List all memberships"""
+        """List all MembershipTypes"""
         query = select(MembershipType)
 
-        result = await self.db.execute(query)
+        result: Result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def get_type_by_code(self, membership_type_code: str) -> MembershipType:
+        """Get one MembershipType by code"""
+        query = (
+            select(MembershipType)
+            .where(MembershipType.code == membership_type_code)
+        )
+
+        result: Result = await self.db.execute(query)
+        membership_type: MembershipType | None = result.scalar_one_or_none()
+        if not membership_type:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Membership type '{membership_type_code}' not found",
+            )
+
+        return membership_type
 
 
 def get_membership_service(db: DbSession) -> MembershipService:
