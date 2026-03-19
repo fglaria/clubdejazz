@@ -92,11 +92,25 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name_1: string;
+  last_name_2: string | null;
   rut: string | null;
   phone: string | null;
-  birth_date: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+export interface UserProfileUpdate {
+  first_name?: string;
+  middle_name?: string;
+  last_name_1?: string;
+  last_name_2?: string;
+  email?: string;
+  rut?: string;
+  phone?: string;
+  is_active?: boolean;
 }
 
 // Fee rate types

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api";
-import type { Membership, MembershipStatus, RoleAssignment } from "@/lib/types";
+import type { Membership, MembershipStatus, RoleAssignment, UserProfileUpdate } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, KeyRound, Shield, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { CheckCircle, XCircle, KeyRound, Pencil, Shield, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 const statusLabels: Record<MembershipStatus, string> = {
   PENDING: "Pendiente",
@@ -51,10 +51,10 @@ const statusColors: Record<MembershipStatus, string> = {
 };
 
 const membershipTypeOptions = [
-  { code: "NUMERARIO", label: "Socio Numerario" },
-  { code: "HONORARIO", label: "Socio Honorario" },
-  { code: "FUNDADOR", label: "Socio Fundador" },
-  { code: "ESTUDIANTE", label: "Socio Estudiante" },
+  { code: "NUMERARIO", label: "Numerario" },
+  { code: "HONORARIO", label: "Honorario" },
+  { code: "FUNDADOR", label: "Fundador" },
+  { code: "ESTUDIANTE", label: "Estudiante" },
 ];
 
 const filterLabels: Record<MembershipStatus | "ALL", string> = {
@@ -78,9 +78,21 @@ const emptyForm = {
   membership_type_code: "NUMERARIO",
 };
 
+const emptyEditForm: UserProfileUpdate & { is_active: boolean } = {
+  first_name: "",
+  middle_name: "",
+  last_name_1: "",
+  last_name_2: "",
+  email: "",
+  rut: "",
+  phone: "",
+  is_active: true,
+};
+
 const ALL_ROLES = ["MEMBER", "ADMIN", "SUPER_ADMIN"] as const;
 
 const roleBadgeColors: Record<string, string> = {
+  MEMBER: "bg-slate-100 text-slate-600",
   ADMIN: "bg-blue-100 text-blue-800",
   SUPER_ADMIN: "bg-red-100 text-red-800",
 };
@@ -105,6 +117,10 @@ export default function MembersPage() {
   // Role management dialog state
   const [rolesTarget, setRolesTarget] = useState<{ id: string; name: string } | null>(null);
 
+  // Edit user dialog state
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editForm, setEditForm] = useState<UserProfileUpdate & { is_active: boolean }>(emptyEditForm);
+
   const { data: memberships, isLoading } = useQuery({
     queryKey: ["admin", "memberships", statusFilter],
     queryFn: () =>
@@ -127,6 +143,28 @@ export default function MembersPage() {
     queryFn: () => adminApi.users.getRoles(rolesTarget!.id),
     enabled: rolesTarget !== null,
   });
+
+  const { data: editUserData, isLoading: editUserLoading } = useQuery({
+    queryKey: ["admin", "users", editTarget?.id],
+    queryFn: () => adminApi.users.get(editTarget!.id),
+    enabled: editTarget !== null,
+  });
+
+  // Sync fetched user data into the edit form
+  useEffect(() => {
+    if (editUserData) {
+      setEditForm({
+        first_name: editUserData.first_name,
+        middle_name: editUserData.middle_name ?? "",
+        last_name_1: editUserData.last_name_1,
+        last_name_2: editUserData.last_name_2 ?? "",
+        email: editUserData.email,
+        rut: editUserData.rut ?? "",
+        phone: editUserData.phone ?? "",
+        is_active: editUserData.is_active,
+      });
+    }
+  }, [editUserData]);
 
   const reviewMutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: "approve" | "reject" }) =>
@@ -165,11 +203,11 @@ export default function MembersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const updateRoleMutation = useMutation({
-    mutationFn: ({ action, role_name, user_id }: { action: "assign" | "revoke"; role_name: string; user_id: string }) =>
-      adminApi.users.updateRole(user_id, role_name, action),
-    onSuccess: (_, { action, role_name, user_id }) => {
-      toast.success(action === "assign" ? `Rol ${role_name} asignado` : `Rol ${role_name} revocado`);
+  const setRoleMutation = useMutation({
+    mutationFn: ({ role_name, user_id }: { role_name: string; user_id: string }) =>
+      adminApi.users.setRole(user_id, role_name),
+    onSuccess: (_, { role_name, user_id }) => {
+      toast.success(`Rol cambiado a ${role_name}`);
       queryClient.invalidateQueries({ queryKey: ["admin", "memberships"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "users", user_id, "roles"] });
     },
@@ -188,6 +226,26 @@ export default function MembersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users", "withoutMembership"] });
       setAssignOpen(false);
       setAssignForm({ user_id: "", membership_type_code: "NUMERARIO" });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: () => adminApi.users.update(editTarget!.id, {
+      first_name: editForm.first_name || undefined,
+      middle_name: editForm.middle_name || undefined,
+      last_name_1: editForm.last_name_1 || undefined,
+      last_name_2: editForm.last_name_2 || undefined,
+      email: editForm.email || undefined,
+      rut: editForm.rut || undefined,
+      phone: editForm.phone || undefined,
+      is_active: editForm.is_active,
+    }),
+    onSuccess: () => {
+      toast.success("Datos actualizados");
+      queryClient.invalidateQueries({ queryKey: ["admin", "memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", editTarget?.id] });
+      setEditTarget(null);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -264,24 +322,24 @@ export default function MembersPage() {
       </div>
 
       <div className="border rounded-lg bg-white">
-        <Table>
+        <Table className="w-full [&_th]:px-2 [&_td]:px-2">
           <TableHeader>
             <TableRow>
               {[
-                { col: "member_number", label: "#", className: "w-16 cursor-pointer select-none" },
+                { col: "member_number", label: "#", className: "w-10 cursor-pointer select-none" },
                 { col: "name", label: "Nombre", className: "cursor-pointer select-none" },
                 { col: "email", label: "Correo", className: "cursor-pointer select-none" },
-                { col: "phone", label: "Teléfono", className: "select-none" },
-                { col: "type", label: "Tipo", className: "cursor-pointer select-none" },
-                { col: "roles", label: "Roles", className: "select-none" },
-                { col: "status", label: "Estado", className: "cursor-pointer select-none" },
-                { col: "start_date", label: "Fecha inicio", className: "cursor-pointer select-none" },
+                { col: "phone", label: "Teléfono", className: "w-28 select-none" },
+                { col: "type", label: "Tipo", className: "w-32 cursor-pointer select-none" },
+                { col: "roles", label: "Rol", className: "w-20 select-none" },
+                { col: "status", label: "Estado", className: "w-24 cursor-pointer select-none" },
+                { col: "start_date", label: "Inicio", className: "w-24 cursor-pointer select-none" },
               ].map(({ col, label, className }) => (
                 <TableHead key={col} className={className} onClick={() => toggleSort(col)}>
                   <span className="inline-flex items-center">{label}<SortIcon col={col} /></span>
                 </TableHead>
               ))}
-              <TableHead className="text-right w-36">Acciones</TableHead>
+              <TableHead className="text-right w-24">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -292,9 +350,9 @@ export default function MembersPage() {
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>  {/* Tipo */}
-                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>  {/* Roles — new */}
-                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>  {/* Estado */}
+                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
                 </TableRow>
@@ -316,24 +374,21 @@ export default function MembersPage() {
                   <TableCell className="text-slate-500">{m.user.phone ?? "—"}</TableCell>
                   <TableCell>{m.membership_type.name}</TableCell>
                   <TableCell>
-                    {(() => {
-                      const adminRoles = (m.user.roles ?? []).filter((r) => r !== "MEMBER");
-                      return adminRoles.length === 0 ? (
-                        <span className="text-slate-400 text-sm">—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {adminRoles.map((r) => (
-                            <Badge
-                              key={r}
-                              variant="secondary"
-                              className={roleBadgeColors[r] ?? "bg-slate-100 text-slate-700"}
-                            >
-                              {r}
-                            </Badge>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                    {(m.user.roles ?? []).length === 0 ? (
+                      <span className="text-slate-400 text-sm">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {(m.user.roles ?? []).map((r) => (
+                          <Badge
+                            key={r}
+                            variant="secondary"
+                            className={roleBadgeColors[r] ?? "bg-slate-100 text-slate-700"}
+                          >
+                            {r}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={statusColors[m.status]}>
@@ -345,6 +400,15 @@ export default function MembersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-slate-500 hover:text-slate-700"
+                        onClick={() => setEditTarget({ id: m.user_id, name: m.user.full_name })}
+                        title="Editar usuario"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       {m.status === "PENDING" && (
                         <>
                           <Button
@@ -617,6 +681,111 @@ export default function MembersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Edit user dialog */}
+      <Dialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) { setEditTarget(null); setEditForm(emptyEditForm); }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar socio</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-500">{editTarget?.name}</p>
+          {editUserLoading ? (
+            <div className="grid grid-cols-2 gap-4 py-2">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="space-y-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 py-2">
+              <div className="space-y-1">
+                <Label>Nombre *</Label>
+                <Input
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Segundo nombre</Label>
+                <Input
+                  value={editForm.middle_name}
+                  onChange={(e) => setEditForm({ ...editForm, middle_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Apellido paterno *</Label>
+                <Input
+                  value={editForm.last_name_1}
+                  onChange={(e) => setEditForm({ ...editForm, last_name_1: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Apellido materno</Label>
+                <Input
+                  value={editForm.last_name_2}
+                  onChange={(e) => setEditForm({ ...editForm, last_name_2: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>RUT</Label>
+                <Input
+                  value={editForm.rut}
+                  onChange={(e) => setEditForm({ ...editForm, rut: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Teléfono</Label>
+                <Input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2 flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="edit-is-active"
+                  checked={editForm.is_active}
+                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="edit-is-active">Usuario activo</Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditTarget(null); setEditForm(emptyEditForm); }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => updateUserMutation.mutate()}
+              disabled={
+                updateUserMutation.isPending ||
+                editUserLoading ||
+                !editForm.first_name ||
+                !editForm.last_name_1 ||
+                !editForm.email
+              }
+            >
+              {updateUserMutation.isPending ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Role management dialog */}
       <Dialog
         open={rolesTarget !== null}
@@ -634,24 +803,30 @@ export default function MembersPage() {
               <p className="text-sm text-slate-400">Cargando...</p>
             ) : (
               ALL_ROLES.map((roleName) => {
-                const hasRole = (targetRoles ?? []).some((r: RoleAssignment) => r.name === roleName);
+                const isCurrent = (targetRoles ?? []).some((r: RoleAssignment) => r.name === roleName);
                 return (
                   <div key={roleName} className="flex items-center justify-between py-1">
-                    <span className="text-sm font-medium">{roleName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{roleName}</span>
+                      {isCurrent && (
+                        <Badge variant="secondary" className={roleBadgeColors[roleName] ?? "bg-slate-100 text-slate-700"}>
+                          actual
+                        </Badge>
+                      )}
+                    </div>
                     <Button
                       size="sm"
-                      variant={hasRole ? "destructive" : "outline"}
-                      className="w-20"
-                      disabled={updateRoleMutation.isPending}
+                      variant={isCurrent ? "secondary" : "outline"}
+                      className="w-24"
+                      disabled={isCurrent || setRoleMutation.isPending}
                       onClick={() =>
-                        updateRoleMutation.mutate({
+                        setRoleMutation.mutate({
                           role_name: roleName,
-                          action: hasRole ? "revoke" : "assign",
                           user_id: rolesTarget!.id,
                         })
                       }
                     >
-                      {hasRole ? "Revocar" : "Asignar"}
+                      {isCurrent ? "Asignado" : "Establecer"}
                     </Button>
                   </div>
                 );
