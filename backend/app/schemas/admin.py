@@ -232,5 +232,5 @@ class UserRoleUpdate(BaseModel):
 class UserProfileUpdate(UserUpdate):
     """Update user profile fields (admin). Extends UserUpdate with admin-only fields."""
     email: EmailStr | None = None
-    rut: str | None = None
+    rut: str | None = Field(None, min_length=8, max_length=12)
     is_active: bool | None = None
