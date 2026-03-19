@@ -4,10 +4,11 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.membership import MembershipStatus
 from app.models.payment import FeeType, PaymentMethod, PaymentStatus
+from app.schemas.user import UserUpdate
 
 
 # === Membership Admin Schemas ===
@@ -39,6 +40,13 @@ class UserSummary(BaseModel):
 class UserSummaryWithRoles(UserSummary):
     """UserSummary extended with role names. Used in membership list only."""
     roles: list[str] = []
+
+    @field_validator("roles", mode="before")
+    @classmethod
+    def extract_role_names(cls, v: list) -> list[str]:
+        if v and hasattr(v[0], "role"):
+            return [ur.role.name for ur in v]
+        return v
 
 
 class UserStatusUpdate(BaseModel):
@@ -215,6 +223,14 @@ class RoleAssignmentResponse(BaseModel):
 
 
 class UserRoleUpdate(BaseModel):
-    """Assign or revoke a role from a user."""
+    """Set a user's role (exclusive — replaces any existing role)."""
     role_name: str
-    action: str = Field(..., pattern="^(assign|revoke)$")
+
+
+# === User Profile Update Schema ===
+
+class UserProfileUpdate(UserUpdate):
+    """Update user profile fields (admin). Extends UserUpdate with admin-only fields."""
+    email: EmailStr | None = None
+    rut: str | None = None
+    is_active: bool | None = None
